@@ -807,8 +807,19 @@ NSTimeInterval     const kDDRollingLeeway              = 1.0;              // 1s
     if (_currentLogFileInfo == nil || _rollingFrequency <= 0.0) {
         return;
     }
-
-    NSDate *logFileCreationDate = [_currentLogFileInfo creationDate];
+    
+    NSDate *logFileCreationDate;
+    NSDateFormatter *fileDateFormatter = [[NSDateFormatter alloc] init];
+    [fileDateFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+    [fileDateFormatter setDateFormat: @"yyyy'-'MM'-'dd'--'HH'-'mm'-'ss'-'SSS'"];
+    [fileDateFormatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+    NSArray<NSString *> *arrayComponent = [[_currentLogFileInfo fileName] componentsSeparatedByString:@" "];
+    if (arrayComponent.count > 0) {
+        NSString *stringDate = arrayComponent.lastObject;
+        stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
+        logFileCreationDate = [fileDateFormatter dateFromString:stringDate];
+    }
+    
     NSTimeInterval frequency = MIN(_rollingFrequency, DBL_MAX - [logFileCreationDate timeIntervalSinceReferenceDate]);
     NSDate *logFileRollingDate = [logFileCreationDate dateByAddingTimeInterval:frequency];
 
@@ -1431,7 +1442,7 @@ static NSString * const kDDXAttrArchivedName = @"lumberjack.log.archived";
 
 - (NSDate *)modificationDate {
     if (_modificationDate == nil) {
-        _modificationDate = self.fileAttributes[NSFileModificationDate];
+        _modificationDate = [self creationDate];
     }
 
     return _modificationDate;
@@ -1439,7 +1450,20 @@ static NSString * const kDDXAttrArchivedName = @"lumberjack.log.archived";
 
 - (NSDate *)creationDate {
     if (_creationDate == nil) {
-        _creationDate = self.fileAttributes[NSFileCreationDate];
+        NSDateFormatter *fileDateFormatter = [[NSDateFormatter alloc] init];
+        [fileDateFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+        [fileDateFormatter setDateFormat: @"yyyy'-'MM'-'dd'--'HH'-'mm'-'ss'-'SSS'"];
+        [fileDateFormatter setTimeZone:[NSTimeZone timeZoneForSecondsFromGMT:0]];
+        
+        DDLogFileInfo *logFileInfo = [[DDLogFileInfo alloc] initWithFilePath:filePath];
+        NSDate *date = [NSDate new];
+        NSArray<NSString *> *arrayComponent = [[logFileInfo fileName] componentsSeparatedByString:@" "];
+        if (arrayComponent.count > 0) {
+            NSString *stringDate = arrayComponent.lastObject;
+            stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
+            date = [fileDateFormatter dateFromString:stringDate];
+        }
+        _creationDate = date;
     }
 
     return _creationDate;
