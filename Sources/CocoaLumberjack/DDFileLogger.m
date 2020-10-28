@@ -399,23 +399,47 @@ NSTimeInterval     const kDDRollingLeeway              = 1.0;              // 1s
 
         NSArray<NSString *> *arrayComponent = [[obj1 fileName] componentsSeparatedByString:@" "];
         if (arrayComponent.count > 0) {
-            NSString *stringDate = arrayComponent.lastObject;
+            NSString *stringDate = @"";
+            if (arrayComponent.count > 2) {
+                NSString *arrayComponent1 = arrayComponent[1];
+                NSString *arrayComponent2 = arrayComponent[2];
+                stringDate = [NSString stringWithFormat:@"%@--%@",arrayComponent1,arrayComponent2];
+            }else {
+                stringDate = arrayComponent.lastObject;
+            }
+            
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
 #if TARGET_IPHONE_SIMULATOR
             // This is only used on the iPhone simulator for backward compatibility reason.
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".archived" withString:@""];
 #endif
+            
+            NSArray<NSString *> *arrayStr = [stringDate componentsSeparatedByString:@"-"];
+            if (arrayStr.count <7) {
+                stringDate = [stringDate stringByAppendingString:@"-00-000"];
+            }
             date1 = [[self logFileDateFormatter] dateFromString:stringDate] ?: [obj1 creationDate];
         }
 
         arrayComponent = [[obj2 fileName] componentsSeparatedByString:@" "];
         if (arrayComponent.count > 0) {
-            NSString *stringDate = arrayComponent.lastObject;
+            NSString *stringDate = @"";
+            if (arrayComponent.count > 2) {
+                NSString *arrayComponent1 = arrayComponent[1];
+                NSString *arrayComponent2 = arrayComponent[2];
+                stringDate = [NSString stringWithFormat:@"%@--%@",arrayComponent1,arrayComponent2];
+            }else {
+                stringDate = arrayComponent.lastObject;
+            }
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
 #if TARGET_IPHONE_SIMULATOR
             // This is only used on the iPhone simulator for backward compatibility reason.
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".archived" withString:@""];
 #endif
+            NSArray<NSString *> *arrayStr = [stringDate componentsSeparatedByString:@"-"];
+            if (arrayStr.count <7) {
+                stringDate = [stringDate stringByAppendingString:@"-00-000"];
+            }
             date2 = [[self logFileDateFormatter] dateFromString:stringDate] ?: [obj2 creationDate];
         }
 
@@ -1351,6 +1375,7 @@ static int exception_count = 0;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 static NSString * const kDDXAttrArchivedName = @"lumberjack.log.archived";
+static NSDateFormatter *cachedDateFormatter = nil;
 
 @interface DDLogFileInfo () {
     __strong NSString *_filePath;
@@ -1405,6 +1430,18 @@ static NSString * const kDDXAttrArchivedName = @"lumberjack.log.archived";
     return self;
 }
 
+
++ (NSDateFormatter *)cachedDateFormatter {
+
+    if (!cachedDateFormatter) {
+        cachedDateFormatter = [[NSDateFormatter alloc] init];
+        [cachedDateFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
+        [cachedDateFormatter setDateFormat: @"yyyy'-'MM'-'dd'--'HH'-'mm'-'ss'-'SSS'"];
+        [cachedDateFormatter setTimeZone:[NSTimeZone localTimeZone]];
+    }
+    return cachedDateFormatter;
+
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma mark Standard Info
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1440,16 +1477,24 @@ static NSString * const kDDXAttrArchivedName = @"lumberjack.log.archived";
 
 - (NSDate *)creationDate {
     if (_creationDate == nil) {
-        NSDateFormatter *fileDateFormatter = [[NSDateFormatter alloc] init];
-        [fileDateFormatter setLocale:[NSLocale localeWithLocaleIdentifier:@"en_US_POSIX"]];
-        [fileDateFormatter setDateFormat: @"yyyy'-'MM'-'dd'--'HH'-'mm'-'ss'-'SSS'"];
-        [fileDateFormatter setTimeZone:[NSTimeZone localTimeZone]];
-
         NSArray<NSString *> *arrayComponent = [[self fileName] componentsSeparatedByString:@" "];
         if (arrayComponent.count > 0) {
-            NSString *stringDate = arrayComponent.lastObject;
+            NSString *stringDate = @"";
+            if (arrayComponent.count > 2) {
+                NSString *arrayComponent1 = arrayComponent[1];
+                NSString *arrayComponent2 = arrayComponent[2];
+                stringDate = [NSString stringWithFormat:@"%@--%@",arrayComponent1,arrayComponent2];
+            }else {
+                stringDate = arrayComponent.lastObject;
+            }
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
-            _creationDate = [fileDateFormatter dateFromString:stringDate];
+         
+            NSArray<NSString *> *arrayStr = [stringDate componentsSeparatedByString:@"-"];
+
+            if (arrayStr.count <7) {
+                stringDate = [stringDate stringByAppendingString:@"-00-000"];
+            }
+            _creationDate = [[DDLogFileInfo cachedDateFormatter] dateFromString:stringDate];
         }
     }
 
