@@ -342,6 +342,9 @@ NSTimeInterval     const kDDRollingLeeway              = 1.0;              // 1s
 }
 
 - (NSArray *)unsortedLogFileNames {
+    
+    [self deleteOldLog];
+
     NSArray *unsortedLogFilePaths = [self unsortedLogFilePaths];
 
     NSMutableArray *unsortedLogFileNames = [NSMutableArray arrayWithCapacity:[unsortedLogFilePaths count]];
@@ -354,6 +357,9 @@ NSTimeInterval     const kDDRollingLeeway              = 1.0;              // 1s
 }
 
 - (NSArray *)unsortedLogFileInfos {
+    
+    [self deleteOldLog];
+    
     NSArray *unsortedLogFilePaths = [self unsortedLogFilePaths];
 
     NSMutableArray *unsortedLogFileInfos = [NSMutableArray arrayWithCapacity:[unsortedLogFilePaths count]];
@@ -399,53 +405,49 @@ NSTimeInterval     const kDDRollingLeeway              = 1.0;              // 1s
 
         NSArray<NSString *> *arrayComponent = [[obj1 fileName] componentsSeparatedByString:@" "];
         if (arrayComponent.count > 0) {
-            NSString *stringDate = @"";
-            if (arrayComponent.count > 2) {
-                NSString *arrayComponent1 = arrayComponent[1];
-                NSString *arrayComponent2 = arrayComponent[2];
-                stringDate = [NSString stringWithFormat:@"%@--%@",arrayComponent1,arrayComponent2];
-            }else {
-                stringDate = arrayComponent.lastObject;
-            }
-            
+            NSString *stringDate  = arrayComponent.lastObject;
+
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
 #if TARGET_IPHONE_SIMULATOR
             // This is only used on the iPhone simulator for backward compatibility reason.
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".archived" withString:@""];
 #endif
-            
-            NSArray<NSString *> *arrayStr = [stringDate componentsSeparatedByString:@"-"];
-            if (arrayStr.count <7) {
-                stringDate = [stringDate stringByAppendingString:@"-00-000"];
-            }
             date1 = [[self logFileDateFormatter] dateFromString:stringDate] ?: [obj1 creationDate];
         }
 
         arrayComponent = [[obj2 fileName] componentsSeparatedByString:@" "];
         if (arrayComponent.count > 0) {
-            NSString *stringDate = @"";
-            if (arrayComponent.count > 2) {
-                NSString *arrayComponent1 = arrayComponent[1];
-                NSString *arrayComponent2 = arrayComponent[2];
-                stringDate = [NSString stringWithFormat:@"%@--%@",arrayComponent1,arrayComponent2];
-            }else {
-                stringDate = arrayComponent.lastObject;
-            }
+            NSString *stringDate  = arrayComponent.lastObject;
+            
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
 #if TARGET_IPHONE_SIMULATOR
             // This is only used on the iPhone simulator for backward compatibility reason.
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".archived" withString:@""];
 #endif
-            NSArray<NSString *> *arrayStr = [stringDate componentsSeparatedByString:@"-"];
-            if (arrayStr.count <7) {
-                stringDate = [stringDate stringByAppendingString:@"-00-000"];
-            }
             date2 = [[self logFileDateFormatter] dateFromString:stringDate] ?: [obj2 creationDate];
         }
 
         return [date2 compare:date1 ?: [NSDate new]];
     }];
 
+}
+
+- (void)deleteOldLog {
+    
+    NSArray *unsortedLogFilePaths = [self unsortedLogFilePaths];
+    NSMutableArray *unsortedLogFileInfos = [NSMutableArray arrayWithCapacity:[unsortedLogFilePaths count]];
+    for (NSString *filePath in unsortedLogFilePaths) {
+        NSArray<NSString *> *arrayComponent = [[filePath lastPathComponent] componentsSeparatedByString:@" "];
+        if (arrayComponent.count > 2) {
+            NSError *error = nil;
+            BOOL success = [[NSFileManager defaultManager] removeItemAtPath:filePath error:&error];
+            if (success) {
+                NSLogInfo(@"DDLogFileManagerDefault: Deleting file: %@", [filePath lastPathComponent]);
+            } else {
+                NSLogError(@"DDLogFileManagerDefault: Error deleting file %@", error);
+            }
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1479,21 +1481,10 @@ static NSDateFormatter *cachedDateFormatter = nil;
     if (_creationDate == nil) {
         NSArray<NSString *> *arrayComponent = [[self fileName] componentsSeparatedByString:@" "];
         if (arrayComponent.count > 0) {
-            NSString *stringDate = @"";
-            if (arrayComponent.count > 2) {
-                NSString *arrayComponent1 = arrayComponent[1];
-                NSString *arrayComponent2 = arrayComponent[2];
-                stringDate = [NSString stringWithFormat:@"%@--%@",arrayComponent1,arrayComponent2];
-            }else {
-                stringDate = arrayComponent.lastObject;
-            }
+            NSString *stringDate  = arrayComponent.lastObject;
+
             stringDate = [stringDate stringByReplacingOccurrencesOfString:@".log" withString:@""];
          
-            NSArray<NSString *> *arrayStr = [stringDate componentsSeparatedByString:@"-"];
-
-            if (arrayStr.count <7) {
-                stringDate = [stringDate stringByAppendingString:@"-00-000"];
-            }
             _creationDate = [[DDLogFileInfo cachedDateFormatter] dateFromString:stringDate];
         }
     }
